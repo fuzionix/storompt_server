@@ -4,6 +4,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 import time
 
+response = {}
+
 @csrf_exempt
 def index(request, *args, **kwargs):
   print('request: ', request.method)
@@ -12,6 +14,5 @@ def index(request, *args, **kwargs):
     print('body:    ', request.body)
 
     time.sleep(5)
-    response = {}
     response['msg'] = 'hello world'
   return JsonResponse(response)
