@@ -7,8 +7,9 @@ import time
 response = {}
 
 @csrf_exempt
-def index(request, *args, **kwargs):
+def index(request, id):
   print('request: ', request.method)
+  print('id is -', id)
   if request.method == 'POST':
     print('headers: ', request.headers)
     print('body:    ', request.body)
