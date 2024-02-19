@@ -17,3 +17,10 @@ def index(request, id):
     time.sleep(5)
     response['msg'] = 'hello world'
   return JsonResponse(response)
+
+@csrf_exempt
+def createItem(request):
+  if request.method == 'POST':
+    response['msg'] = 'item created'
+    print('type:  ', request.body)
+  return JsonResponse(response)
