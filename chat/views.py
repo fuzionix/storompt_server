@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse, response
 from django.views.decorators.csrf import csrf_exempt
-from .models import ChatItem
+from .models import ChatItem, Story
 
 import replicate
 
@@ -52,10 +52,13 @@ def index(request, id):
       'user': False
     }
 
-    query_item = ChatItem.objects.filter(pk=id).values()
-    query_item_result = {}
-    for item in query_item:
-      query_item_result = json.loads(item['chat_history'])
+    try:
+      query_item = ChatItem.objects.filter(pk=id).values()
+      query_item_result = []
+      for item in query_item:
+        query_item_result = json.loads(item['chat_history'])
+    except ChatItem.DoesNotExist:
+      query_item_result = []
 
     query_item_result.append(response)
 

@@ -1,16 +1,23 @@
 import uuid
 from django.db import models
 from django.utils.timezone import now
-
-class ChatItem(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = models.TextField()
-    title_description = models.TextField(blank=True)
-    chat_history = models.JSONField(null=True, blank=True)
-    genre = models.TextField(blank=True)
-    classification = models.TextField(blank=True)
-    background = models.TextField(blank=True)
-    create_date = models.DateTimeField(default=now, blank=True)
+    
+class Story(models.Model):
+    id = models.BigAutoField(primary_key=True, default=1, editable=False)
+    title = models.TextField(max_length=100)
+    title_description = models.TextField(max_length=200, blank=True)
+    genre = models.TextField(max_length=50, blank=True)
+    classification = models.TextField(max_length=50, blank=True)
+    background = models.TextField(max_length=1000, blank=True)
 
     def __str__(self):
         return self.title
+    
+class ChatItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    chat_history = models.JSONField(null=True, blank=True)
+    create_date = models.DateTimeField(default=now, blank=True)
+    story_id = models.ForeignKey('Story', default=1, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.id
