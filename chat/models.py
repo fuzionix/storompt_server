@@ -20,4 +20,4 @@ class ChatItem(models.Model):
     story_id = models.ForeignKey('Story', default=1, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.id
+        return self.id.hex

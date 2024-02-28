@@ -17,7 +17,11 @@ def index(request, id):
   response = {}
   if request.method == 'POST' and id:
     chat_result = ''
+    system_prompt = "I want you to act as the following charactor in first person narrative with emotion and action. Please make a verbose response to extend the plot."
     body = json.loads(request.body)
+
+    prompt = create_prompt(body['chatHistory'])
+    prompt += 'Lila Nightshade: '
 
     print('replicate start')
     for event in rep.stream(
@@ -26,10 +30,10 @@ def index(request, id):
             "debug": False,
             "top_k": 50,
             "top_p": 1,
-            "prompt": body['userTextInput'],
+            "prompt": prompt,
             "temperature": 0.5,
-            "system_prompt": "You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.",
-            "max_new_tokens": 250,
+            "system_prompt": system_prompt,
+            "max_new_tokens": 150,
             "min_new_tokens": -1
         },
     ):
@@ -47,7 +51,7 @@ def index(request, id):
     )
 
     response = {
-      'name': 'Seraphina',
+      'name': 'Lila Nightshade',
       'message': chat_result,
       'user': False
     }
@@ -72,15 +76,19 @@ def get_item(request, id):
   response = {}
   if request.method == 'GET' and id:
     query_item = ChatItem.objects.filter(pk=id).values()
+    query_item_story = Story.objects.filter(pk=query_item[0]['story_id_id']).values()
     for item in query_item:
       response['id'] = item['id']
+      response['chat_history'] = item['chat_history']
+      response['create_date'] = item['create_date']
+
+    for item in query_item_story:
       response['title'] = item['title']
       response['title_description'] = item['title_description']
-      response['chat_history'] = item['chat_history']
       response['genre'] = item['genre']
       response['classification'] = item['classification']
       response['background'] = item['background']
-      response['create_date'] = item['create_date']
+      
   return JsonResponse(response)
 
 @csrf_exempt
@@ -91,14 +99,12 @@ def create_item(request):
     if body['type'] == 'random':
       item_id = uuid.uuid4()
       response['id'] = item_id
+
+      story = Story.objects.get(pk=1)
       chat_item = ChatItem(
         id=item_id,
-        title='Forgotten City',
-        title_description='Dive into an entire captivating story just by interacting',
-        genre='Fantasy',
-        classification='Experience',
-        background='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat.',
-        chat_history='[{"name":"SeraphinaWindwhisper","message":"Item created successfully","user":false},{"name":"You","message":"Nice","user":true}, {"name":"SeraphinaWindwhisper","message":"Et penatibus ut mauris tellus pharetra aliquet vestibulum nunc diam. Tristique duis sed sed fermentum vel.","user":false}]'
+        chat_history='[{"name":"SeraphinaWindwhisper","message":"Item created successfully","user":false},{"name":"You","message":"Nice","user":true}, {"name":"SeraphinaWindwhisper","message":"Et penatibus ut mauris tellus pharetra aliquet vestibulum nunc diam. Tristique duis sed sed fermentum vel.","user":false}]',
+        story_id=story
       )
       chat_item.save()
     elif body['type'] == 'custom':
@@ -106,3 +112,16 @@ def create_item(request):
     else:
       pass
   return JsonResponse(response)
+
+def create_prompt(chat_history):
+  prompt_result = ''
+  prompt_charactor = 'Lila Nightshade is a 22-year-old apprentice mage with short black hair and piercing blue eyes. She is a curious and adventurous young girl who loves exploring the woods and learning about magic. Her goal is to become a powerful mage like her idol, the famous wizard Malyster Blackwood. Lila is brave and willing to take risks, but she can also be impulsive and reckless at times. Her biggest fear is failing her mentor and disappointing those she cares about.'
+  
+  chat_list = json.loads(chat_history)
+
+  for chatitem in chat_list:
+    prompt_result += f"{chatitem['name']}: {chatitem['message']}\n"
+
+  prompt_result = prompt_charactor + '\n' + prompt_result
+
+  return prompt_result
