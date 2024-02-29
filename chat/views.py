@@ -103,7 +103,7 @@ def create_item(request):
       story = Story.objects.get(pk=1)
       chat_item = ChatItem(
         id=item_id,
-        chat_history='[{"name":"SeraphinaWindwhisper","message":"Item created successfully","user":false},{"name":"You","message":"Nice","user":true}, {"name":"SeraphinaWindwhisper","message":"Et penatibus ut mauris tellus pharetra aliquet vestibulum nunc diam. Tristique duis sed sed fermentum vel.","user":false}]',
+        chat_history='[{"name":"Lila Nightshade","message":"Hey there, traveler! excitedly My name is Lila Nightshade, and I\'m a young apprentice mage. bounces up and down I love exploring these woods and learning spells. Do you need some help finding anything? Maybe we could go on an adventure together!","user":false}]',
         story_id=story
       )
       chat_item.save()
@@ -115,7 +115,7 @@ def create_item(request):
 
 def create_prompt(chat_history):
   prompt_result = ''
-  prompt_charactor = 'Lila Nightshade is a 22-year-old apprentice mage with short black hair and piercing blue eyes. She is a curious and adventurous young girl who loves exploring the woods and learning about magic. Her goal is to become a powerful mage like her idol, the famous wizard Malyster Blackwood. Lila is brave and willing to take risks, but she can also be impulsive and reckless at times. Her biggest fear is failing her mentor and disappointing those she cares about.'
+  prompt_charactor = 'Lila Nightshade is an apprentice mage with short black hair and piercing blue eyes. She is a curious and adventurous young girl who loves exploring the woods and learning about magic. Her goal is to become a powerful mage like her idol, the famous wizard Malyster Blackwood. Lila is brave and willing to take risks, but she can also be impulsive and reckless at times. Her biggest fear is failing her mentor and disappointing those she cares about.'
   
   chat_list = json.loads(chat_history)
 
