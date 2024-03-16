@@ -107,8 +107,17 @@ def create_item(request):
         story_id=story
       )
       chat_item.save()
-    elif body['type'] == 'custom':
-      response['id'] = uuid.uuid4()
+    elif body['type'] == 'custom' and body['storyInfo']:
+      item_id = uuid.uuid4()
+      response['id'] = item_id
+      story_info = body['storyInfo']['background']
+
+      story = Story(
+        title=story_info['title'],
+        genre=story_info['genre'],
+        classification=story_info['category']
+      )
+      story.save()
     else:
       pass
   return JsonResponse(response)

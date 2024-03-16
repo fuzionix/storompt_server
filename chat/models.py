@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.timezone import now
     
 class Story(models.Model):
-    id = models.BigAutoField(primary_key=True, default=1, editable=False)
+    id = models.BigAutoField(primary_key=True, editable=False)
     title = models.TextField(max_length=100)
     title_description = models.TextField(max_length=200, blank=True)
     genre = models.TextField(max_length=50, blank=True)
