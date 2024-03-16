@@ -110,14 +110,22 @@ def create_item(request):
     elif body['type'] == 'custom' and body['storyInfo']:
       item_id = uuid.uuid4()
       response['id'] = item_id
-      story_info = body['storyInfo']['background']
+      story_info = body['storyInfo']
 
       story = Story(
-        title=story_info['title'],
-        genre=story_info['genre'],
-        classification=story_info['category']
+        title=story_info['background']['title'],
+        genre=story_info['background']['genre'],
+        classification=story_info['background']['category'],
+        background=story_info['portrayal']['content']
       )
       story.save()
+      story = Story.objects.filter().latest('id')
+      chat_item = ChatItem(
+        id=item_id,
+        chat_history='[{"name":"Lila Nightshade","message":"Hey there, traveler! excitedly My name is Lila Nightshade, and I\'m a young apprentice mage. bounces up and down I love exploring these woods and learning spells. Do you need some help finding anything? Maybe we could go on an adventure together!","user":false}]',
+        story_id=story
+      )
+      chat_item.save()
     else:
       pass
   return JsonResponse(response)
