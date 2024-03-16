@@ -11,7 +11,7 @@ class Story(models.Model):
     background = models.TextField(max_length=1000, blank=True)
 
     def __str__(self):
-        return self.title
+        return str(self.id)
     
 class ChatItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
