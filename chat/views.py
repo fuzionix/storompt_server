@@ -130,6 +130,46 @@ def create_item(request):
       pass
   return JsonResponse(response)
 
+@csrf_exempt
+def create_portrayal(request):
+  response = {}
+  if request.method == 'POST':
+    portrayal_result = ''
+    body = json.loads(request.body)
+    prompt = f"""
+Given are the information of the story.
+
+Story Name: { body['storyInfo']['background']['title'] }
+Genre: { body['storyInfo']['background']['genre'] }
+Charactor Name: { body['storyInfo']['charactors'][0]['charname'] }
+Personalities: { body['storyInfo']['charactors'][0]['personality'] }
+    """
+    system_prompt = "You are a professional story maker. Please create a portrayal for the story in 2 paragraphes. The portrayal should include parts of story background and charactors."
+
+    print('replicate start')
+    for event in rep.stream(
+        "meta/llama-2-70b-chat",
+        input={
+            "debug": False,
+            "top_k": 50,
+            "top_p": 1,
+            "prompt": prompt,
+            "temperature": 0.5,
+            "system_prompt": system_prompt,
+            "max_new_tokens": 250,
+            "min_new_tokens": -1
+        },
+    ):
+        print(str(event), end="")
+        portrayal_result += str(event)
+    print('')
+    print('replicate end')
+
+    response['portrayal'] = portrayal_result.strip()
+  else:
+      pass
+  return JsonResponse(response)
+
 def create_prompt(chat_history):
   prompt_result = ''
   prompt_charactor = 'Lila Nightshade is an apprentice mage with short black hair and piercing blue eyes. She is a curious and adventurous young girl who loves exploring the woods and learning about magic. Her goal is to become a powerful mage like her idol, the famous wizard Malyster Blackwood. Lila is brave and willing to take risks, but she can also be impulsive and reckless at times. Her biggest fear is failing her mentor and disappointing those she cares about.'
