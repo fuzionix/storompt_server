@@ -17,6 +17,7 @@ class Charactor(models.Model):
     id = models.BigAutoField(primary_key=True, editable=False)
     name = models.TextField(max_length=100)
     personality = models.TextField(max_length=1000, blank=True)
+    greeting = models.TextField(max_length=1000, blank=True)
     story_id = models.ForeignKey('Story', default=1, on_delete=models.CASCADE)
 
     def __str__(self):

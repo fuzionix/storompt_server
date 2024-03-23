@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse, response
 from django.views.decorators.csrf import csrf_exempt
-from .models import ChatItem, Story
+from .models import ChatItem, Story, Charactor
 
 import replicate
 
@@ -76,7 +76,13 @@ def get_item(request, id):
   response = {}
   if request.method == 'GET' and id:
     query_item = ChatItem.objects.filter(pk=id).values()
-    query_item_story = Story.objects.filter(pk=query_item[0]['story_id_id']).values()
+    try:
+      query_item_story = Story.objects.filter(pk=query_item[0]['story_id_id']).values()
+    except:
+      response = JsonResponse(response)
+      response.content = 'Failed to find story by id'
+      return response
+    
     for item in query_item:
       response['id'] = item['id']
       response['chat_history'] = item['chat_history']
@@ -95,34 +101,64 @@ def get_item(request, id):
 def create_item(request):
   response = {}
   if request.method == 'POST':
-    body = json.loads(request.body)
-    if body['type'] == 'random':
-      item_id = uuid.uuid4()
-      response['id'] = item_id
+    item_id = uuid.uuid4()
+    response['id'] = item_id
 
-      story = Story.objects.get(pk=1)
+    body = json.loads(request.body)
+    
+    char_chatitem = [
+      {
+        "name": "",
+        "message": "",
+        "user": False
+      }
+    ]
+
+    if body['type'] == 'random':
+      story = Story.objects.get(pk=15)
+
+      char_chatitem[0]["name"] = "Random Fern"
+      char_chatitem[0]["message"] = "Hey there, traveler! excitedly My name is Lila Nightshade, and I\'m a young apprentice mage. bounces up and down I love exploring these woods and learning spells. Do you need some help finding anything? Maybe we could go on an adventure together!"
+
+      char_chatitem_json = json.dumps(char_chatitem)
+
       chat_item = ChatItem(
         id=item_id,
-        chat_history='[{"name":"Lila Nightshade","message":"Hey there, traveler! excitedly My name is Lila Nightshade, and I\'m a young apprentice mage. bounces up and down I love exploring these woods and learning spells. Do you need some help finding anything? Maybe we could go on an adventure together!","user":false}]',
+        chat_history=char_chatitem_json,
         story_id=story
       )
       chat_item.save()
     elif body['type'] == 'custom' and body['storyInfo']:
-      item_id = uuid.uuid4()
-      response['id'] = item_id
       story_info = body['storyInfo']
+
+      greeting = create_greeting(story_info)
+      print(greeting)
+
+      char_chatitem[0]["name"] = story_info['charactors'][0]['charname']
+      char_chatitem[0]["message"] = greeting
+      char_chatitem_json = json.dumps(char_chatitem)
 
       story = Story(
         title=story_info['background']['title'],
         genre=story_info['background']['genre'],
         classification=story_info['background']['category'],
-        background=story_info['portrayal']['content']
+        background=story_info['portrayal']['content'],
+        title_description=story_info['portrayal']['content'].split(".")[0],
       )
       story.save()
       story = Story.objects.filter().latest('id')
+
+      charactor = Charactor(
+        name=story_info['charactors'][0]['charname'],
+        personality=story_info['charactors'][0]['personality'],
+        greeting=greeting,
+        story_id=story
+      )
+      charactor.save()
+
       chat_item = ChatItem(
         id=item_id,
-        chat_history='[{"name":"Lila Nightshade","message":"Hey there, traveler! excitedly My name is Lila Nightshade, and I\'m a young apprentice mage. bounces up and down I love exploring these woods and learning spells. Do you need some help finding anything? Maybe we could go on an adventure together!","user":false}]',
+        chat_history=char_chatitem_json,
         story_id=story
       )
       chat_item.save()
@@ -146,29 +182,62 @@ Personalities: { body['storyInfo']['charactors'][0]['personality'] }
     """
     system_prompt = "You are a professional story maker. Please create a portrayal for the story in 2 paragraphes. The portrayal should include parts of story background and charactors."
 
-    print('replicate start')
-    for event in rep.stream(
-        "meta/llama-2-70b-chat",
-        input={
-            "debug": False,
-            "top_k": 50,
-            "top_p": 1,
-            "prompt": prompt,
-            "temperature": 0.5,
-            "system_prompt": system_prompt,
-            "max_new_tokens": 250,
-            "min_new_tokens": -1
-        },
-    ):
-        print(str(event), end="")
-        portrayal_result += str(event)
-    print('')
-    print('replicate end')
+    # print('replicate start')
+    # for event in rep.stream(
+    #     "meta/llama-2-70b-chat",
+    #     input={
+    #         "debug": False,
+    #         "top_k": 50,
+    #         "top_p": 1,
+    #         "prompt": prompt,
+    #         "temperature": 0.5,
+    #         "system_prompt": system_prompt,
+    #         "max_new_tokens": 250,
+    #         "min_new_tokens": -1
+    #     },
+    # ):
+    #     print(str(event), end="")
+    #     portrayal_result += str(event)
+    # print('')
+    # print('replicate end')
 
-    response['portrayal'] = portrayal_result.strip()
+    # response['portrayal'] = portrayal_result.strip()
+
+    # FOR DEBUG
+    response['portrayal'] = 'Hello world'
   else:
       pass
   return JsonResponse(response)
+
+def create_greeting(story_info):
+  print(story_info)
+  greeting_result = ''
+  prompt = f"""
+Given are the portrayal of the story.
+
+{ story_info['portrayal']['content'] }
+    """
+  system_prompt = f"You are the charactor in a conversation. According to the portrayal. Please create a first response (greeting) as { story_info['charactors'][0]['charname'] } for the story. The response should match the character's personality given by the portrayal."
+
+  print('replicate start')
+  for event in rep.stream(
+      "meta/llama-2-70b-chat",
+      input={
+          "debug": False,
+          "top_p": 1,
+          "prompt": prompt,
+          "temperature": 0.5,
+          "system_prompt": system_prompt,
+          "max_new_tokens": 150,
+          "min_new_tokens": -1
+      },
+  ):
+      print(str(event), end="")
+      greeting_result += str(event)
+  print('')
+  print('replicate end')
+
+  return greeting_result
 
 def create_prompt(chat_history):
   prompt_result = ''
