@@ -17,11 +17,16 @@ def index(request, id):
   response = {}
   if request.method == 'POST' and id:
     chat_result = ''
-    system_prompt = "I want you to act as the following charactor in first person narrative with emotion and action. Please make a verbose response to extend the plot."
     body = json.loads(request.body)
 
+    system_prompt = body['background'] + "\n"
+    system_prompt += "I want you to act as the following charactor in first person narrative with emotion and action. Prevent repeating conversation response. Each response should contain only one sentence."
+
     prompt = create_prompt(body['chatHistory'])
-    prompt += 'Lila Nightshade: '
+    prompt += f"{ body['targetName'] }: "
+
+    print('system_prompt', system_prompt)
+    print('prompt', prompt)
 
     print('replicate start')
     for event in rep.stream(
@@ -51,7 +56,7 @@ def index(request, id):
     )
 
     response = {
-      'name': 'Lila Nightshade',
+      'name': body['targetName'],
       'message': chat_result,
       'user': False
     }
@@ -83,6 +88,13 @@ def get_item(request, id):
       response.content = 'Failed to find story by id'
       return response
     
+    try:
+      query_item_charactor = Charactor.objects.filter(story_id=query_item[0]['story_id_id']).values()
+    except:
+      response = JsonResponse(response)
+      response.content = 'Failed to find charactor by story id'
+      return response
+    
     for item in query_item:
       response['id'] = item['id']
       response['chat_history'] = item['chat_history']
@@ -94,6 +106,9 @@ def get_item(request, id):
       response['genre'] = item['genre']
       response['classification'] = item['classification']
       response['background'] = item['background']
+
+    for item in query_item_charactor:
+      response['charactor'] = item['name']
       
   return JsonResponse(response)
 
@@ -182,29 +197,29 @@ Personalities: { body['storyInfo']['charactors'][0]['personality'] }
     """
     system_prompt = "You are a professional story maker. Please create a portrayal for the story in 2 paragraphes. The portrayal should include parts of story background and charactors."
 
-    # print('replicate start')
-    # for event in rep.stream(
-    #     "meta/llama-2-70b-chat",
-    #     input={
-    #         "debug": False,
-    #         "top_k": 50,
-    #         "top_p": 1,
-    #         "prompt": prompt,
-    #         "temperature": 0.5,
-    #         "system_prompt": system_prompt,
-    #         "max_new_tokens": 250,
-    #         "min_new_tokens": -1
-    #     },
-    # ):
-    #     print(str(event), end="")
-    #     portrayal_result += str(event)
-    # print('')
-    # print('replicate end')
+    print('replicate start')
+    for event in rep.stream(
+        "meta/llama-2-70b-chat",
+        input={
+            "debug": False,
+            "top_k": 50,
+            "top_p": 1,
+            "prompt": prompt,
+            "temperature": 0.5,
+            "system_prompt": system_prompt,
+            "max_new_tokens": 250,
+            "min_new_tokens": -1
+        },
+    ):
+        print(str(event), end="")
+        portrayal_result += str(event)
+    print('')
+    print('replicate end')
 
-    # response['portrayal'] = portrayal_result.strip()
+    response['portrayal'] = portrayal_result.strip()
 
     # FOR DEBUG
-    response['portrayal'] = 'Hello world'
+    # response['portrayal'] = 'Hello world'
   else:
       pass
   return JsonResponse(response)
@@ -246,8 +261,8 @@ def create_prompt(chat_history):
   chat_list = json.loads(chat_history)
 
   for chatitem in chat_list:
-    prompt_result += f"{chatitem['name']}: {chatitem['message']}\n"
+    prompt_result += f"{chatitem['name']}: {chatitem['message'].strip()}\n"
 
-  prompt_result = prompt_charactor + '\n' + prompt_result
+  prompt_result = prompt_result
 
   return prompt_result
