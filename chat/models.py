@@ -9,6 +9,7 @@ class Story(models.Model):
     genre = models.TextField(max_length=50, blank=True)
     classification = models.TextField(max_length=50, blank=True)
     background = models.TextField(max_length=1000, blank=True)
+    official = models.BooleanField(default=False)
 
     def __str__(self):
         return str(self.id)
@@ -18,6 +19,7 @@ class Charactor(models.Model):
     name = models.TextField(max_length=100)
     personality = models.TextField(max_length=1000, blank=True)
     greeting = models.TextField(max_length=1000, blank=True)
+    original = models.BooleanField(default=True)
     story_id = models.ForeignKey('Story', default=1, on_delete=models.CASCADE)
 
     def __str__(self):
