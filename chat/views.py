@@ -79,6 +79,7 @@ def index(request, id):
 
 def get_item(request, id):
   response = {}
+  response['charactor'] = []
   if request.method == 'GET' and id:
     query_item = ChatItem.objects.filter(pk=id).values()
     try:
@@ -94,13 +95,14 @@ def get_item(request, id):
       response = JsonResponse(response)
       response.content = 'Failed to find charactor by story id'
       return response
-    
+        
     for item in query_item:
       response['id'] = item['id']
       response['chat_history'] = item['chat_history']
       response['create_date'] = item['create_date']
 
     for item in query_item_story:
+      response['story_id'] = item['id']
       response['title'] = item['title']
       response['title_description'] = item['title_description']
       response['genre'] = item['genre']
@@ -108,7 +110,12 @@ def get_item(request, id):
       response['background'] = item['background']
 
     for item in query_item_charactor:
-      response['charactor'] = item['name']
+      response['charactor'].append({
+        "name": item['name'],
+        "personality": item['personality']
+      })
+      
+    response['charactor'] = json.dumps(response['charactor'])
       
   return JsonResponse(response)
 
@@ -222,6 +229,30 @@ Personalities: { body['storyInfo']['charactors'][0]['personality'] }
     # response['portrayal'] = 'Hello world'
   else:
       pass
+  return JsonResponse(response)
+
+@csrf_exempt
+def add_charactor(request):
+  response = {}
+  if request.method == 'POST':
+    body = json.loads(request.body)
+    if (body['id'] and body['id'] is not None):
+      story = Story.objects.get(pk=int(body['id']))
+      charactor = Charactor(
+        name=body['name'],
+        personality=body['personality'],
+        greeting='Hello World',
+        story_id=story
+      )
+      charactor.save()
+    else:
+      response = JsonResponse(response)
+      response.content = 'Failed to find charactor by story id'
+      return response
+  else:
+    print('Not a POST request')
+
+  response['test'] = 'test'
   return JsonResponse(response)
 
 def create_greeting(story_info):
