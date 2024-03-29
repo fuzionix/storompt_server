@@ -19,21 +19,22 @@ def index(request, id):
     chat_result = ''
     body = json.loads(request.body)
 
+    print(body)
+
     system_prompt = body['background'] + "\n"
     system_prompt += "I want you to act as the following charactor in first person narrative with emotion and action. Prevent repeating conversation response. Each response should contain only one sentence."
 
-    prompt = create_prompt(body['chatHistory'])
+    prompt = create_prompt(body['chatHistory'], body['targetName'], body['personality'])
     prompt += f"{ body['targetName'] }: "
 
-    print('system_prompt', system_prompt)
-    print('prompt', prompt)
+    # print('system_prompt', system_prompt)
+    # print('prompt', prompt)
 
     print('replicate start')
     for event in rep.stream(
         "meta/llama-2-70b-chat",
         input={
             "debug": False,
-            "top_k": 50,
             "top_p": 1,
             "prompt": prompt,
             "temperature": 0.5,
@@ -75,6 +76,73 @@ def index(request, id):
     ChatItem.objects.filter(pk=id).update(
       chat_history=json.dumps(query_item_result)
     )
+  return JsonResponse(response)
+
+@csrf_exempt
+def receive_message(request, id):
+  response = {}
+  if request.method == 'POST' and id:
+    chat_result = ''
+    body = json.loads(request.body)
+
+    system_prompt = body['background'] + "\n"
+    system_prompt += "I want you to act as the following charactor in first person narrative with emotion and action. Prevent repeating conversation response. Each response should contain only one sentence."
+
+    prompt = create_prompt(body['chatHistory'], body['targetName'], body['personality'])
+    prompt += f"{ body['targetName'] }: "
+
+    print('system_prompt', system_prompt)
+    print('prompt', prompt)
+
+    print('replicate start')
+    for event in rep.stream(
+        "meta/llama-2-70b-chat",
+        input={
+            "debug": False,
+            "top_p": 1,
+            "prompt": prompt,
+            "temperature": 0.5,
+            "system_prompt": system_prompt,
+            "max_new_tokens": 150,
+            "min_new_tokens": -1
+        },
+    ):
+        print(str(event), end="")
+        chat_result += str(event)
+    print('')
+    print('replicate end')
+
+    # FOR DEBUG
+    # chat_result = 'Hello receive'
+
+    # update when user response
+    ChatItem.objects.filter(pk=id).update(
+      chat_history=body['chatHistory']
+    )
+
+    response = {
+      'name': body['targetName'],
+      'message': chat_result,
+      'user': False
+    }
+
+    try:
+      query_item = ChatItem.objects.filter(pk=id).values()
+      query_item_result = []
+      for item in query_item:
+        query_item_result = json.loads(item['chat_history'])
+    except ChatItem.DoesNotExist:
+      query_item_result = []
+
+    query_item_result.append(response)
+
+    # update when ai response
+    ChatItem.objects.filter(pk=id).update(
+      chat_history=json.dumps(query_item_result)
+    )
+
+    time.sleep(3)
+
   return JsonResponse(response)
 
 def get_item(request, id):
@@ -209,7 +277,6 @@ Personalities: { body['storyInfo']['charactors'][0]['personality'] }
         "meta/llama-2-70b-chat",
         input={
             "debug": False,
-            "top_k": 50,
             "top_p": 1,
             "prompt": prompt,
             "temperature": 0.5,
@@ -285,9 +352,25 @@ Given are the portrayal of the story.
 
   return greeting_result
 
-def create_prompt(chat_history):
+@csrf_exempt
+def undo(request, id):
+  response = {}
+  if request.method == 'POST' and id:
+    body = json.loads(request.body)
+
+    # update when user press undo button
+    ChatItem.objects.filter(pk=id).update(
+      chat_history=body['chatHistory']
+    )
+
+  return JsonResponse(response)
+
+def create_prompt(chat_history, target_name = "The charactor", personality = '[]'):
+  print('personality', personality)
   prompt_result = ''
-  prompt_charactor = 'Lila Nightshade is an apprentice mage with short black hair and piercing blue eyes. She is a curious and adventurous young girl who loves exploring the woods and learning about magic. Her goal is to become a powerful mage like her idol, the famous wizard Malyster Blackwood. Lila is brave and willing to take risks, but she can also be impulsive and reckless at times. Her biggest fear is failing her mentor and disappointing those she cares about.'
+  prompt_charactor = f"{target_name} is a {', '.join(eval(personality))} person"
+
+  prompt_result += f"{prompt_charactor} \n"
   
   chat_list = json.loads(chat_history)
 
