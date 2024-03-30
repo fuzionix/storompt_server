@@ -19,16 +19,14 @@ def index(request, id):
     chat_result = ''
     body = json.loads(request.body)
 
-    print(body)
-
     system_prompt = body['background'] + "\n"
     system_prompt += "I want you to act as the following charactor in first person narrative with emotion and action. Prevent repeating conversation response. Each response should contain only one sentence."
 
     prompt = create_prompt(body['chatHistory'], body['targetName'], body['personality'])
     prompt += f"{ body['targetName'] }: "
 
-    # print('system_prompt', system_prompt)
-    # print('prompt', prompt)
+    print('system_prompt', system_prompt)
+    print('prompt', prompt)
 
     print('replicate start')
     for event in rep.stream(
@@ -50,6 +48,9 @@ def index(request, id):
 
     # FOR DEBUG
     # chat_result = 'Hello world'
+    # chat_result = "Melody Newman: Thank you, Nancy. Your skills will indeed be valuable to me on this journey. I accept your allegiance and welcome you into my service. Peter: Let us proceed at once, for every moment we waste gives our enemies the opportunity to strengthen their hold on Eldrida. We must move quickly and strike decisively if we are to succeed. The fate of our kingdom hangs in the balance, and I will not rest until it is secure. Shall we depart?"
+
+    chat_result = sanitize_chat_result(chat_result)
 
     # update when user response
     ChatItem.objects.filter(pk=id).update(
@@ -114,6 +115,8 @@ def receive_message(request, id):
 
     # FOR DEBUG
     # chat_result = 'Hello receive'
+
+    chat_result = sanitize_chat_result(chat_result)
 
     # update when user response
     ChatItem.objects.filter(pk=id).update(
@@ -380,3 +383,9 @@ def create_prompt(chat_history, target_name = "The charactor", personality = '[]
   prompt_result = prompt_result
 
   return prompt_result
+
+def sanitize_chat_result(result):
+  sanitized_result = result.split(":")[1].strip()
+  if (result != sanitized_result):
+    print('sanitized detected')
+  return sanitized_result
