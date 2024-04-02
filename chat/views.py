@@ -21,16 +21,18 @@ def index(request, id):
 
     audience = define_audience(body['category'])
 
+    print('category: ', body['category'])
+
     system_prompt = body['background'] + "\n"
-    system_prompt += f"I want you to act as the following charactor in first person narrative with emotion and action. Prevent repeating conversation response. { audience['content'] }. Each response should contain only one sentence."
+    system_prompt += f"I want you to act as { body['targetName'] } in first person narrative with emotion and action. Prevent repeating conversation response. { audience['content'] }. Each response should contain only one sentence."
 
     prompt = create_prompt(body['chatHistory'], body['targetName'], body['personality'])
     prompt += f"{ body['targetName'] }: "
 
-    print('system_prompt', system_prompt)
-    print('prompt', prompt)
+    print('system_prompt: ', system_prompt)
+    print('prompt: ', prompt)
 
-    print('replicate start')
+    print('[replicate start]')
     for event in rep.stream(
         "meta/llama-2-70b-chat",
         input={
@@ -46,7 +48,7 @@ def index(request, id):
         print(str(event), end="")
         chat_result += str(event)
     print('')
-    print('replicate end')
+    print('[replicate end]')
 
     # FOR DEBUG
     # chat_result = 'Hello world'
@@ -88,16 +90,18 @@ def receive_message(request, id):
     chat_result = ''
     body = json.loads(request.body)
 
+    audience = define_audience(body['category'])
+
     system_prompt = body['background'] + "\n"
-    system_prompt += "I want you to act as the following charactor in first person narrative with emotion and action. Prevent repeating conversation response. Each response should contain only one sentence."
+    system_prompt += f"I want you to act as { body['targetName'] } in first person narrative with emotion and action. Prevent repeating conversation response. { audience['content'] }. Each response should contain only one sentence."
 
     prompt = create_prompt(body['chatHistory'], body['targetName'], body['personality'])
     prompt += f"{ body['targetName'] }: "
 
-    print('system_prompt', system_prompt)
-    print('prompt', prompt)
+    print('system_prompt: ', system_prompt)
+    print('prompt: ', prompt)
 
-    print('replicate start')
+    print('[replicate start]')
     for event in rep.stream(
         "meta/llama-2-70b-chat",
         input={
@@ -113,7 +117,7 @@ def receive_message(request, id):
         print(str(event), end="")
         chat_result += str(event)
     print('')
-    print('replicate end')
+    print('[replicate end]')
 
     # FOR DEBUG
     # chat_result = 'Hello receive'
@@ -227,7 +231,6 @@ def create_item(request):
       story_info = body['storyInfo']
 
       greeting = create_greeting(story_info)
-      print(greeting)
 
       char_chatitem[0]["name"] = story_info['charactors'][0]['charname']
       char_chatitem[0]["message"] = greeting
@@ -280,7 +283,7 @@ Personalities: { body['storyInfo']['charactors'][0]['personality'] }
     system_prompt = f"You are a professional story maker { audience['class'] }. Please create a portrayal for the story in 2 paragraphes. { audience['content'] }. The portrayal should include parts of story background and charactors."
     print('system_prompt (create_portrayal): ', system_prompt)
 
-    print('replicate start')
+    print('[replicate start]')
     for event in rep.stream(
         "meta/llama-2-70b-chat",
         input={
@@ -296,7 +299,7 @@ Personalities: { body['storyInfo']['charactors'][0]['personality'] }
         print(str(event), end="")
         portrayal_result += str(event)
     print('')
-    print('replicate end')
+    print('[replicate end]')
 
     portrayal_result = sanitize_chat_result(portrayal_result)
     response['portrayal'] = portrayal_result.strip()
@@ -317,7 +320,7 @@ def add_charactor(request):
       charactor = Charactor(
         name=body['name'],
         personality=body['personality'],
-        greeting='Hello World',
+        greeting='',
         story_id=story
       )
       charactor.save()
@@ -343,7 +346,7 @@ Given are the portrayal of the story.
   system_prompt = f"You are the charactor in a conversation. According to the portrayal. Please create a first response (greeting) as { story_info['charactors'][0]['charname'] } for the story { audience['class'] }. { audience['content'] }. The response should match the character's personality given by the portrayal."
   print('system_prompt (create_greeting): ', system_prompt)
   
-  print('replicate start')
+  print('[replicate start]')
   for event in rep.stream(
       "meta/llama-2-70b-chat",
       input={
@@ -359,7 +362,7 @@ Given are the portrayal of the story.
       print(str(event), end="")
       greeting_result += str(event)
   print('')
-  print('replicate end')
+  print('[replicate end]')
 
   return greeting_result
 
@@ -395,7 +398,6 @@ def define_audience(category = 'Primary'):
   return audience
 
 def create_prompt(chat_history, target_name = "The charactor", personality = '[]'):
-  print('personality', personality)
   prompt_result = ''
   prompt_charactor = f"{target_name} is a {', '.join(eval(personality))} person"
 
@@ -415,5 +417,5 @@ def sanitize_chat_result(result):
   if (len(result.split(":")) > 1):
     sanitized_result = result.split(":")[1].strip()
   if (result != sanitized_result):
-    print('sanitized detected')
+    print('[sanitized detected]')
   return sanitized_result
