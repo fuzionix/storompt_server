@@ -19,8 +19,10 @@ def index(request, id):
     chat_result = ''
     body = json.loads(request.body)
 
+    audience = define_audience(body['category'])
+
     system_prompt = body['background'] + "\n"
-    system_prompt += "I want you to act as the following charactor in first person narrative with emotion and action. Prevent repeating conversation response. Each response should contain only one sentence."
+    system_prompt += f"I want you to act as the following charactor in first person narrative with emotion and action. Prevent repeating conversation response. { audience['content'] }. Each response should contain only one sentence."
 
     prompt = create_prompt(body['chatHistory'], body['targetName'], body['personality'])
     prompt += f"{ body['targetName'] }: "
@@ -273,7 +275,10 @@ Genre: { body['storyInfo']['background']['genre'] }
 Charactor Name: { body['storyInfo']['charactors'][0]['charname'] }
 Personalities: { body['storyInfo']['charactors'][0]['personality'] }
     """
-    system_prompt = "You are a professional story maker. Please create a portrayal for the story in 2 paragraphes. The portrayal should include parts of story background and charactors."
+      
+    audience = define_audience(body['storyInfo']['background']['category'])
+    system_prompt = f"You are a professional story maker { audience['class'] }. Please create a portrayal for the story in 2 paragraphes. { audience['content'] }. The portrayal should include parts of story background and charactors."
+    print('system_prompt (create_portrayal): ', system_prompt)
 
     print('replicate start')
     for event in rep.stream(
@@ -293,6 +298,7 @@ Personalities: { body['storyInfo']['charactors'][0]['personality'] }
     print('')
     print('replicate end')
 
+    portrayal_result = sanitize_chat_result(portrayal_result)
     response['portrayal'] = portrayal_result.strip()
 
     # FOR DEBUG
@@ -326,15 +332,17 @@ def add_charactor(request):
   return JsonResponse(response)
 
 def create_greeting(story_info):
-  print(story_info)
   greeting_result = ''
   prompt = f"""
 Given are the portrayal of the story.
 
 { story_info['portrayal']['content'] }
     """
-  system_prompt = f"You are the charactor in a conversation. According to the portrayal. Please create a first response (greeting) as { story_info['charactors'][0]['charname'] } for the story. The response should match the character's personality given by the portrayal."
-
+  
+  audience = define_audience(story_info['background']['category'])
+  system_prompt = f"You are the charactor in a conversation. According to the portrayal. Please create a first response (greeting) as { story_info['charactors'][0]['charname'] } for the story { audience['class'] }. { audience['content'] }. The response should match the character's personality given by the portrayal."
+  print('system_prompt (create_greeting): ', system_prompt)
+  
   print('replicate start')
   for event in rep.stream(
       "meta/llama-2-70b-chat",
@@ -368,6 +376,24 @@ def undo(request, id):
 
   return JsonResponse(response)
 
+def define_audience(category = 'Primary'):
+  audience = {
+    "class": "",
+    "content": ""
+  }
+
+  if (category == 'Primary'):
+    audience['class'] = "for kids"
+    audience['content'] = "Use words and sentences that kids can understand"
+  elif (category == 'Middle'):
+    audience['class'] = "for teenagers"
+    audience['content'] = "Use words and sentences that teenagers can understand"
+  elif (category == 'Advanced'):
+    audience['class'] = "for adults"
+    audience['content'] = "Use advanced words and advanced sentences for adults"
+
+  return audience
+
 def create_prompt(chat_history, target_name = "The charactor", personality = '[]'):
   print('personality', personality)
   prompt_result = ''
@@ -385,7 +411,9 @@ def create_prompt(chat_history, target_name = "The charactor", personality = '[]
   return prompt_result
 
 def sanitize_chat_result(result):
-  sanitized_result = result.split(":")[1].strip()
+  sanitized_result = result
+  if (len(result.split(":")) > 1):
+    sanitized_result = result.split(":")[1].strip()
   if (result != sanitized_result):
     print('sanitized detected')
   return sanitized_result
